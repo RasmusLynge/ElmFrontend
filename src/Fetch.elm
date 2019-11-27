@@ -10,8 +10,6 @@ import Json.Decode exposing (Decoder, field, string)
 
 
 -- MAIN
-
-
 main =
   Browser.element
     { init = init
@@ -23,8 +21,6 @@ main =
 
 
 -- MODEL
-
-
 type Model
   = Failure
   | Loading
@@ -38,8 +34,6 @@ init _ =
 
 
 -- UPDATE
-
-
 type Msg
   = MorePlease
   | GotGif (Result Http.Error String)
@@ -62,8 +56,6 @@ update msg model =
 
 
 -- SUBSCRIPTIONS
-
-
 subscriptions : Model -> Sub Msg
 subscriptions model =
   Sub.none
@@ -71,40 +63,52 @@ subscriptions model =
 
 
 -- VIEW
-
-
 view : Model -> Html Msg
 view model =
   div []
-    [ h2 [] [ text "Learning to fetch" ]
-    , inputForm model
+    [ h1 [] [ text "Learning to fetch" ]
+    , searchUser model
     , viewGif model
     ]
 
-inputForm : Model -> Html Msg
-inputForm model = 
+searchUser : Model -> Html Msg
+searchUser model = 
     div []
-        [ text "Seach for a member here "
-        , br [] []
+        [ 
+        h5 [] [text "Fetch all users here: "]
+        , button [ onClick MorePlease] [ text "Fetch All users!" ]
+        , h5 [] [text "Fetch / Delete user here: "]
         , input [type_ "text", placeholder "search with id" ] []
         , br [] []
-        , button [ onClick MorePlease ] [ text "Fetch users!" ]
+        , button [ onClick MorePlease] [ text "Fetch user!" ]
+        , button [ onClick MorePlease] [ text "Delete user!" ]
+        , h5 [] [text "Create a user here: "]
+        , input [type_ "text", placeholder "user name" ] []
+        , input [type_ "text", placeholder "user score" ] []
+        , br [] []
+        , button [ onClick MorePlease] [ text "Create user!" ]
         , br [] []
         , br [] []
-        , br [] []
+        , h3 [] [text "Table of users"]
         , table [] 
             [
             tr []
                 [
                     th[] [text "id "]
-                    ,th[] [text "name "]
+                    , th[] [text "name "]
                     , th[] [text "score "]
                 ]
             ,tr [] 
                 [
-                    td[] [text "12"]
+                    td[] [text "1"]
                     ,td[] [text "Rasmus"]
                     ,td[] [text "+9000"]
+                ]
+            ,tr [] 
+                [
+                    td[] [text "2"]
+                    ,td[] [text "Magnus"]
+                    ,td[] [text "13"]
                 ]
             ]
         ]
@@ -150,8 +154,6 @@ viewGif model =
 
 
 -- HTTP
-
-
 getRandomCatGif : Cmd Msg
 getRandomCatGif =
   Http.get
