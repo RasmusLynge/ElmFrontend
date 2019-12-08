@@ -5,7 +5,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
-import Json.Decode exposing (Decoder, field, string)
+import Json.Decode as JD exposing (Decoder, field, string, map3, int)
 
 
 
@@ -18,41 +18,66 @@ main =
     , view = view
     }
 
+-- USER
+type alias User =
+  {
+      id: Int
+      ,name: String
+      ,score: Int
+  }
 
+type alias ListModel =
+  {
+    userList: List User
+  , msg: String
+  }
 
 -- MODEL
 type Model
   = Failure
   | Loading
-  | Success String
+  | Success User
+  | SuccessAll (List User)
 
 
 init : () -> (Model, Cmd Msg)
 init _ =
-  (Loading, getRandomCatGif)
-
-
+  (Loading, getSingleUser)
 
 -- UPDATE
 type Msg
   = MorePlease
-  | GotGif (Result Http.Error String)
+  | SingleUserButton
+  | GetAllUsersButton
+  | GotUser (Result Http.Error User)
+  | GotAllUserList (Result Http.Error (List User))
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     MorePlease ->
-      (Loading, getRandomCatGif)
+      (Loading, getSingleUser)
 
-    GotGif result ->
+    SingleUserButton ->
+      (Loading, getSingleUser)
+    
+    GetAllUsersButton ->
+      (Loading, getAllUsers)
+
+    GotUser result ->
       case result of
         Ok url ->
           (Success url, Cmd.none)
-
         Err _ ->
           (Failure, Cmd.none)
 
+    GotAllUserList result ->
+      case result of
+        Ok url ->
+          (SuccessAll url, Cmd.none)
+        Err _ ->
+          (Failure, Cmd.none)
 
 
 -- SUBSCRIPTIONS
@@ -67,8 +92,9 @@ view : Model -> Html Msg
 view model =
   div []
     [ h1 [] [ text "Learning to fetch" ]
+    , hr [] []
     , searchUser model
-    , viewGif model
+    , viewTable model
     ]
 
 searchUser : Model -> Html Msg
@@ -76,20 +102,38 @@ searchUser model =
     div []
         [ 
         h5 [] [text "Fetch all users here: "]
-        , button [ onClick MorePlease] [ text "Fetch All users!" ]
+        , button [ onClick GetAllUsersButton] [ text "Fetch All users!" ]
+        , hr [] []
         , h5 [] [text "Fetch / Delete user here: "]
         , input [type_ "text", placeholder "search with id" ] []
         , br [] []
-        , button [ onClick MorePlease] [ text "Fetch user!" ]
+        , button [ onClick SingleUserButton] [ text "Fetch user!" ]
         , button [ onClick MorePlease] [ text "Delete user!" ]
+        , hr [] []
         , h5 [] [text "Create a user here: "]
         , input [type_ "text", placeholder "user name" ] []
         , input [type_ "text", placeholder "user score" ] []
         , br [] []
         , button [ onClick MorePlease] [ text "Create user!" ]
-        , br [] []
-        , br [] []
-        , h3 [] [text "Table of users"]
+        , hr [] []
+        ]
+
+viewTable : Model -> Html Msg
+viewTable model =
+  case model of
+    Failure ->
+      div []
+        [ text "I could not load any users. "
+        , button [ onClick MorePlease ] [ text "Try Again!" ]
+        ]
+
+    Loading ->
+      text "Loading..."
+
+    Success user ->
+      div []
+        [ 
+        h3 [] [text "Table of users"]
         , table [] 
             [
             tr []
@@ -100,68 +144,58 @@ searchUser model =
                 ]
             ,tr [] 
                 [
-                    td[] [text "1"]
-                    ,td[] [text "Rasmus"]
-                    ,td[] [text "+9000"]
-                ]
-            ,tr [] 
-                [
-                    td[] [text "2"]
-                    ,td[] [text "Magnus"]
-                    ,td[] [text "13"]
+                    td[] [text (String.fromInt user.id)]
+                    ,td[] [text user.name]
+                    ,td[] [text (String.fromInt user.score)]
                 ]
             ]
         ]
+    
+    SuccessAll list ->
+      table []
+        ([ tr []
+            [ th [] [ text "Id" ]
+            , th [] [ text "Name" ]
+            , th [] [ text "Score"]
+            ]
+         ]
+            ++ List.map showUser list
+        )
 
-viewGif : Model -> Html Msg
-viewGif model =
-  case model of
-    Failure ->
-      div []
-        [ text "I could not load a random cat for some reason. "
-        , button [ onClick MorePlease ] [ text "Try Cats Again!" ]
+showUser: User -> Html Msg
+showUser user =
+    tr [] 
+        [
+            td[] [text (String.fromInt user.id)]
+            ,td[] [text user.name]
+            ,td[] [text (String.fromInt user.score)]
         ]
-
-    Loading ->
-      text "Loading..."
-
-    Success url ->
-      Debug.log(url)
-      div []
-        [ 
-        br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , br [] []
-        , button [ onClick MorePlease, style "display" "block" ] [ text "More Cats Please!" ]
-        , img [ src url ] []
-        ]
-
-
 
 -- HTTP
-getRandomCatGif : Cmd Msg
-getRandomCatGif =
-  Http.get
-    { url = "https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=cat"
-    , expect = Http.expectJson GotGif gifDecoder
-    }
 
+getSingleUser : Cmd Msg
+getSingleUser = 
+    Http.get
+        { url = "http://localhost:4712/member/7"
+        , expect = Http.expectJson GotUser userDecoder
+        }
 
-gifDecoder : Decoder String
-gifDecoder =
-  field "data" (field "image_url" string)
+getAllUsers : Cmd Msg
+getAllUsers =
+    Http.get
+        { url = "http://localhost:4712/member"
+        , expect = Http.expectJson GotAllUserList userListDecoder
+        }
+
+-- JSON DECODERS
+
+userDecoder: Decoder User
+userDecoder = map3 User (field "id" int) (field "name" string) (field "score" int)
+
+userListDecoder: Decoder ( List User )
+userListDecoder = JD.list userDecoder
+  
+
+msgDecoder : Decoder String
+msgDecoder = 
+  field "name" string

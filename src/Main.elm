@@ -42,7 +42,7 @@ update : Msg -> Model -> Model
 update msg model =
   case msg of
     Name name ->
-      { model | name = "name" }
+      { model | name = name }
 
     Password password ->
       { model | password = password }
