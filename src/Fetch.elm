@@ -48,6 +48,7 @@ init _ =
 type Msg
   = MorePlease
   | SingleUserButton
+  | DeleteUser
   | GetAllUsersButton
   | GotUser (Result Http.Error User)
   | GotAllUserList (Result Http.Error (List User))
@@ -61,6 +62,9 @@ update msg model =
 
     SingleUserButton ->
       (Loading, getSingleUser)
+
+    DeleteUser ->
+      (Loading, deleteUser)
     
     GetAllUsersButton ->
       (Loading, getAllUsers)
@@ -108,7 +112,7 @@ searchUser model =
         , input [type_ "text", placeholder "search with id" ] []
         , br [] []
         , button [ onClick SingleUserButton] [ text "Fetch user!" ]
-        , button [ onClick MorePlease] [ text "Delete user!" ]
+        , button [ onClick DeleteUser] [ text "Delete user!" ]
         , hr [] []
         , h5 [] [text "Create a user here: "]
         , input [type_ "text", placeholder "user name" ] []
@@ -172,7 +176,18 @@ showUser user =
         ]
 
 -- HTTP
-
+deleteUser : Cmd Msg
+deleteUser = 
+      Http.request
+        { method = "DELETE"
+        , headers = []
+        , url = "http://localhost:4712/member/7"
+        , body = Http.emptyBody
+        , expect = Http.expectJson GotUser userDecoder
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+        
 getSingleUser : Cmd Msg
 getSingleUser = 
     Http.get
